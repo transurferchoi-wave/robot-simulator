@@ -1,106 +1,141 @@
 #pragma once
 #include "Grid.h"
+#include "Mission.h"
+#include "ReservationTable.h"
+#include "MessageBus.h"
+#include "EventLogger.h"
 #include <string>
 #include <vector>
 #include <mutex>
 #include <atomic>
 #include <thread>
 #include <condition_variable>
-#include <queue>
+#include <deque>
+#include <optional>
 #include <functional>
 
-// ── 상태 머신 ──────────────────────────────────────────────
+// ── 로봇 상태 머신 ─────────────────────────────────────────
 enum class RobotState {
-    IDLE,       // 대기 중
-    PLANNING,   // 경로 계산 중
-    MOVING,     // 이동 중
-    ARRIVED,    // 목적지 도착
-    ERROR       // 오류 상태
+    IDLE,            // 대기 중
+    PLANNING,        // 경로 계산 중
+    MOVING,          // 이동 중
+    ARRIVED,         // 웨이포인트 도착
+    CHARGING_TRAVEL, // 충전소로 이동 중 (NEW)
+    CHARGING,        // 충전 중 (NEW)
+    ERROR
 };
 
 std::string stateToString(RobotState s);
 
-// ── 로봇 명령 ──────────────────────────────────────────────
-struct RobotCommand {
-    enum class Type { MOVE_TO, STOP, RESET } type;
-    Point target; // MOVE_TO 전용
+// ── 플래너 요청 타입 ───────────────────────────────────────
+enum class PlanRequest {
+    NONE,
+    PLAN_NEXT,   // 다음 웨이포인트 계획
+    REPLAN,      // 장애물 변경으로 인한 재계획
+    STOP,
+    RESET
 };
 
 // ── 로봇 클래스 ────────────────────────────────────────────
 class Robot {
 public:
-    Robot(int id, Point startPos, Grid& grid);
+    Robot(int id, Point startPos, Grid& grid,
+          ReservationTable& rt, MessageBus& bus, EventLogger& logger);
     ~Robot();
 
-    // 외부 명령 (스레드 안전)
-    void moveTo(Point target);
+    // ── 외부 명령 (스레드 안전) ────────────────────────────
+    void moveTo(Point target);          // 단일 목표 이동
+    void addMission(Mission mission);   // 미션 큐에 추가
+    void clearMissions();               // 미션 큐 비우기
     void stop();
     void reset();
+    void notifyObstacleChanged();       // 경로 재계산 트리거
 
-    // 상태 조회 (스레드 안전)
-    int        getId()       const { return id_; }
+    // ── 상태 조회 ──────────────────────────────────────────
+    int        getId()      const { return id_; }
+    std::string getName()   const { return name_; }
     Point      getPosition() const;
     Point      getTarget()   const;
     RobotState getState()    const;
     std::vector<Point> getPath() const;
     int        getBattery()  const { return battery_.load(); }
-    std::string getName()    const { return name_; }
+    int        getMissionCount() const;
+    std::optional<Mission> getCurrentMission() const;
+    int        getTimeStep() const { return timeStep_.load(); }
 
-    // 스레드 시작/종료
+    // ── 스레드 생명주기 ────────────────────────────────────
     void start();
     void shutdown();
 
-    // 콜백: 상태 변경 시 호출
-    using StateCallback = std::function<void(int robotId, RobotState)>;
+    using StateCallback = std::function<void(int, RobotState)>;
     void setStateCallback(StateCallback cb) { stateCallback_ = cb; }
 
 private:
     // ── 3개 스레드 ─────────────────────────────────────────
-    void sensorThread();    // 센서: 위치 업데이트, 배터리 시뮬
-    void plannerThread();   // 경로 계획: A* 실행
-    void controlThread();   // 제어: 실제 이동 실행
+    void sensorThread();   // 센서: 배터리, 자동충전 판단
+    void plannerThread();  // 계획: Space-Time A*, 미션 관리
+    void controlThread();  // 제어: 이동 실행
 
-    // 명령 큐 처리
-    bool popCommand(RobotCommand& cmd);
-
+    // 내부 헬퍼
     void setState(RobotState s);
     void setPath(std::vector<Point> path);
+    void publishPosition();
+    void publishState(RobotState s);
+    void logEvent(EventLogger::EventType type, const std::string& data);
+    void onArrivalInternal(Mission& mission, class Pathfinder& pf);
+
+    // 플래너 신호
+    void requestPlan(PlanRequest req);
+    PlanRequest waitForPlanRequest();
 
     // ── 멤버 변수 ──────────────────────────────────────────
-    int              id_;
-    std::string      name_;
-    Grid&            grid_;
+    int             id_;
+    std::string     name_;
+    Grid&           grid_;
+    ReservationTable& rt_;
+    MessageBus&     bus_;
+    EventLogger&    logger_;
 
-    // 위치/상태 (뮤텍스 보호)
+    // 위치/상태
     mutable std::mutex posMutex_;
     Point              position_;
     Point              target_;
     std::vector<Point> currentPath_;
     RobotState         state_{RobotState::IDLE};
 
-    // 배터리 (원자적)
+    // 배터리
     std::atomic<int>   battery_{100};
+    static constexpr int CHARGE_THRESHOLD  = 25; // 25% 이하면 자동 충전
+    static constexpr int CHARGE_FULL       = 100;
+    bool               chargeMissionActive_{false};
 
-    // 명령 큐
-    std::mutex              cmdMutex_;
-    std::condition_variable cmdCV_;
-    std::queue<RobotCommand> cmdQueue_;
+    // 시간 스텝 (예약 테이블 동기화용)
+    std::atomic<int>   timeStep_{0};
 
-    // 경로 계획 동기화
-    std::mutex              planMutex_;
-    std::condition_variable planCV_;
-    bool                    planRequested_{false};
-    bool                    planReady_{false};
-    std::vector<Point>      plannedPath_;
+    // 미션 큐
+    mutable std::mutex missionMutex_;
+    std::deque<Mission> missionQueue_;
+    std::optional<Mission> currentMission_;
+    int  nextMissionId_{0};
 
-    // 제어 동기화
-    std::mutex              ctrlMutex_;
-    std::condition_variable ctrlCV_;
+    // 플래너 ↔ 다른 스레드 동기화
+    std::mutex              planReqMutex_;
+    std::condition_variable planReqCV_;
+    PlanRequest             planReq_{PlanRequest::NONE};
+
+    // 플래너 → 제어 스레드
+    std::mutex              pathMutex_;
+    std::condition_variable pathCV_;
+    std::vector<Point>      pendingPath_;
+    bool                    pathReady_{false};
+
+    // 제어 → 플래너 (웨이포인트 도착 신호)
+    std::mutex              arrivalMutex_;
+    std::condition_variable arrivalCV_;
+    bool                    waypointArrived_{false};
 
     // 스레드
-    std::thread sensorTh_;
-    std::thread plannerTh_;
-    std::thread controlTh_;
+    std::thread sensorTh_, plannerTh_, controlTh_;
     std::atomic<bool> running_{false};
 
     StateCallback stateCallback_;
