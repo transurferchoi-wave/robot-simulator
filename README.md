@@ -1,7 +1,7 @@
 # 🤖 멀티스레드 물류 로봇 시뮬레이터
 
 C++17 기반의 멀티스레드 물류 로봇 시뮬레이터입니다.
-10×10 그리드에서 3대의 로봇이 A* 알고리즘으로 경로를 찾고, TCP 명령과 웹 대시보드로 실시간 제어됩니다.
+10×10 그리드에서 3대의 로봇이 A\* 알고리즘으로 경로를 찾고, TCP 명령과 웹 대시보드로 실시간 제어됩니다.
 
 ## 아키텍처
 
@@ -30,11 +30,11 @@ C++17 기반의 멀티스레드 물류 로봇 시뮬레이터입니다.
 
 ## 스레드 구조 (로봇 1대 기준)
 
-| 스레드 | 역할 | 동기화 |
-|--------|------|--------|
-| **Sensor** | 배터리 소모/충전 시뮬레이션, 위치 감지 | atomic + mutex |
-| **Planner** | 명령 수신 → A* 경로 계획 | condition_variable (cmdCV) |
-| **Control** | 계획된 경로 실행, 이동 시뮬레이션 | condition_variable (planCV) |
+| 스레드      | 역할                                   | 동기화                      |
+| ----------- | -------------------------------------- | --------------------------- |
+| **Sensor**  | 배터리 소모/충전 시뮬레이션, 위치 감지 | atomic + mutex              |
+| **Planner** | 명령 수신 → A\* 경로 계획              | condition_variable (cmdCV)  |
+| **Control** | 계획된 경로 실행, 이동 시뮬레이션      | condition_variable (planCV) |
 
 ## 상태 머신
 
@@ -50,12 +50,14 @@ ERROR: 배터리 0% 또는 경로 없음
 ## 빌드 방법
 
 ### 사전 요구사항 (macOS)
+
 ```bash
 # Homebrew로 CMake 설치
 brew install cmake
 ```
 
 ### 빌드
+
 ```bash
 git clone <repo-url>
 cd robot_simulator
@@ -65,11 +67,13 @@ make -j$(nproc)
 ```
 
 ### 실행
+
 ```bash
 ./robot_sim
 ```
 
 실행 후:
+
 - **웹 대시보드**: http://localhost:8080
 - **TCP 서버**: localhost:8765
 
@@ -108,11 +112,11 @@ nc localhost 8765
 
 ## HTTP API (웹 대시보드 연동)
 
-| 메서드 | 경로 | 설명 |
-|--------|------|------|
-| GET | `/` | 웹 대시보드 HTML |
-| GET | `/state` | 전체 시뮬레이터 상태 JSON |
-| POST | `/command` | 로봇 명령 전송 |
+| 메서드 | 경로       | 설명                      |
+| ------ | ---------- | ------------------------- |
+| GET    | `/`        | 웹 대시보드 HTML          |
+| GET    | `/state`   | 전체 시뮬레이터 상태 JSON |
+| POST   | `/command` | 로봇 명령 전송            |
 
 ## 그리드 맵
 
@@ -138,7 +142,7 @@ nc localhost 8765
 
 - **C++17**: `std::thread`, `std::mutex`, `std::condition_variable`, `std::atomic`
 - **POSIX Socket**: TCP 서버 (비동기 accept + 클라이언트 스레드)
-- **A* 알고리즘**: 8방향 이동 + 옥타일 거리 휴리스틱
+- **A\* 알고리즘**: 8방향 이동 + 옥타일 거리 휴리스틱
 - **경량 JSON**: 외부 의존성 없는 자체 구현 JSON 직렬화/파싱
 - **CMake**: 크로스플랫폼 빌드 시스템
 
@@ -168,3 +172,7 @@ robot_simulator/
 └── third_party/
     └── json.hpp        # 경량 JSON 구현
 ```
+
+## 시뮬레이터 실행 이미지
+
+![Image](https://github.com/user-attachments/assets/390a3d94-8f5c-458d-9871-430e6e27ef1b)
