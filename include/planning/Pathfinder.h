@@ -1,6 +1,6 @@
 #pragma once
-#include "Grid.h"
-#include "ReservationTable.h"
+#include "core/Grid.h"
+#include "planning/ReservationTable.h"
 #include <vector>
 #include <optional>
 

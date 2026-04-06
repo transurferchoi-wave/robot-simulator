@@ -1,9 +1,9 @@
 #pragma once
-#include "Grid.h"
-#include "Mission.h"
-#include "ReservationTable.h"
-#include "MessageBus.h"
-#include "EventLogger.h"
+#include "core/Grid.h"
+#include "core/Mission.h"
+#include "planning/ReservationTable.h"
+#include "messaging/MessageBus.h"
+#include "messaging/EventLogger.h"
 #include <string>
 #include <vector>
 #include <mutex>

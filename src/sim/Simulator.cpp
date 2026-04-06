@@ -1,6 +1,6 @@
-#include "Simulator.h"
-#include "RobotController.h"
-#include "../third_party/json.hpp"
+#include "sim/Simulator.h"
+#include "network/RobotController.h"
+#include "third_party/json.hpp"
 #include <iostream>
 #include <chrono>
 #include <thread>

@@ -15,16 +15,16 @@ find_package(Threads REQUIRED)
 
 set(SOURCES
     src/main.cpp
-    src/Grid.cpp
-    src/Robot.cpp
-    src/Pathfinder.cpp
-    src/RobotController.cpp
-    src/ReservationTable.cpp
-    src/MessageBus.cpp
-    src/EventLogger.cpp
-    src/TcpServer.cpp
-    src/WebServer.cpp
-    src/Simulator.cpp
+    src/core/Grid.cpp
+    src/core/Robot.cpp
+    src/planning/Pathfinder.cpp
+    src/planning/ReservationTable.cpp
+    src/messaging/MessageBus.cpp
+    src/messaging/EventLogger.cpp
+    src/network/TcpServer.cpp
+    src/network/WebServer.cpp
+    src/network/RobotController.cpp
+    src/sim/Simulator.cpp
 )
 
 add_executable(robot_sim ${SOURCES})
@@ -32,6 +32,7 @@ add_executable(robot_sim ${SOURCES})
 target_include_directories(robot_sim PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/third_party
+    ${CMAKE_SOURCE_DIR}
 )
 
 target_link_libraries(robot_sim PRIVATE Threads::Threads)

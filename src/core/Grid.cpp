@@ -1,4 +1,4 @@
-#include "Grid.h"
+#include "core/Grid.h"
 #include <sstream>
 #include <stdexcept>
 #include <cmath>

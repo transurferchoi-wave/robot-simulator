@@ -1,4 +1,4 @@
-#include "ReservationTable.h"
+#include "planning/ReservationTable.h"
 #include <algorithm>
 
 bool ReservationTable::reserve(Point p, int timeStep, int robotId) {

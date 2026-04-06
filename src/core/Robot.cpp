@@ -1,6 +1,6 @@
-#include "Robot.h"
-#include "Pathfinder.h"
-#include "../third_party/json.hpp"
+#include "core/Robot.h"
+#include "planning/Pathfinder.h"
+#include "third_party/json.hpp"
 #include <chrono>
 #include <iostream>
 #include <sstream>

@@ -1,5 +1,5 @@
-#include "RobotController.h"
-#include "../third_party/json.hpp"
+#include "network/RobotController.h"
+#include "third_party/json.hpp"
 #include <stdexcept>
 #include <limits>
 
